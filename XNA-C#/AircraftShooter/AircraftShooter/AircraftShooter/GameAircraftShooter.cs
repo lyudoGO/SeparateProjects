@@ -11,11 +11,12 @@ namespace AircraftShooter
     using Microsoft.Xna.Framework.Input;
     using Microsoft.Xna.Framework.Media;
 
-    public class Game1 : Game
+    public class GameAircraftShooter : Game
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
 
+        InputManager inputManager;
         SpriteFont font;
 
         Texture2D mainBackground;
@@ -30,11 +31,7 @@ namespace AircraftShooter
         Player player;
         Animation rotor;
         List<Enemy> enemies;
-        List<Projectile> playerProjectiles;
-        List<Projectile> enemyProjectiles;
         List<Animation> explosions;
-
-        int score;
 
         SoundEffect bulletSound;
         SoundEffect explosionSound;
@@ -45,14 +42,10 @@ namespace AircraftShooter
         TimeSpan enemyFireTime;
         TimeSpan previosEnemyFireTime;
         Random random;
-        KeyboardState currentKeyboardState;
-        KeyboardState previousKeyboardState;
 
-        Texture2D pixel;// = new Texture2D(GraphicsDevice, 1, 1);
+        //Texture2D pixel;
 
-        //float playerMoveSpeed;
-
-        public Game1()
+        public GameAircraftShooter()
         {
             graphics = new GraphicsDeviceManager(this);
             graphics.PreferredBackBufferWidth = 600;
@@ -63,12 +56,11 @@ namespace AircraftShooter
 
         protected override void Initialize()
         {
+            inputManager = new InputManager();
             player = new Player();
             rotor = new Animation();
             enemies = new List<Enemy>();
             explosions = new List<Animation>();
-            playerProjectiles = new List<Projectile>();
-            enemyProjectiles = new List<Projectile>();
             bgLayerOne = new ParallaxingBackground();
             bgLayerTwo = new ParallaxingBackground();
             random = new Random();
@@ -84,8 +76,8 @@ namespace AircraftShooter
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            pixel = new Texture2D(GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
+            //pixel = new Texture2D(GraphicsDevice, 1, 1);
+            //pixel.SetData(new[] { Color.White });
 
             font = Content.Load<SpriteFont>("Fonts\\SegoeUIMono");
             mainBackground = Content.Load<Texture2D>("Sprites\\Grass_background");
@@ -97,7 +89,7 @@ namespace AircraftShooter
             enemyBulletTexture = Content.Load<Texture2D>("Sprites\\bullet_2_orange");
             explosionTexture = Content.Load<Texture2D>("Sprites\\Explosion");
             Vector2 playerPosition = new Vector2(GraphicsDevice.Viewport.TitleSafeArea.Width / 2, GraphicsDevice.Viewport.TitleSafeArea.Bottom);
-            player.Initialize(Content.Load<Texture2D>("Sprites\\Aircraft_10"), playerPosition);
+            player.Initialize(Content.Load<Texture2D>("Sprites\\Aircraft_10"), playerPosition, GraphicsDevice.Viewport);
             Vector2 rotorPosition = new Vector2((player.Position.X + player.Width / 2), (player.Position.Y - player.Height + 10));
             rotor.Initialize(Content.Load<Texture2D>("Sprites\\Rotor_animation"), rotorPosition, 8, 20, 1f, true);
 
@@ -114,12 +106,10 @@ namespace AircraftShooter
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || currentKeyboardState.IsKeyDown(Keys.Escape))
+            if (inputManager.KeyDown(Keys.Escape))
                 this.Exit();
 
-            
-            currentKeyboardState = Keyboard.GetState();
-
+            inputManager.Update();
             UpdatePlayer(gameTime);
             UpdateRotor(gameTime);
             UpdateEnemies(gameTime);
@@ -130,7 +120,6 @@ namespace AircraftShooter
             bgLayerOne.Update();
             bgLayerTwo.Update();
 
-            previousKeyboardState = currentKeyboardState;
             base.Update(gameTime);
         }
 
@@ -151,7 +140,7 @@ namespace AircraftShooter
                     bullet.Draw(spriteBatch);
                 }
             }
-            foreach (var projectile in playerProjectiles)
+            foreach (var projectile in player.Projectiles)
             {
                 projectile.Draw(spriteBatch, SpriteEffects.None);
             }
@@ -159,14 +148,10 @@ namespace AircraftShooter
             {
                 explosion.Draw(spriteBatch);
             }
-            //foreach (var projectile in enemyProjectiles)
-            //{
-            //    projectile.Draw(spriteBatch, SpriteEffects.FlipVertically);
-            //}
             
             bgLayerTwo.Draw(spriteBatch);
             rotor.Draw(spriteBatch);
-            spriteBatch.DrawString(font, "Scores: " + score, 
+            spriteBatch.DrawString(font, "Scores: " + player.Score, 
                 new Vector2(GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y), Color.White);
             spriteBatch.DrawString(font, "Health: " + player.Health,
                 new Vector2(GraphicsDevice.Viewport.TitleSafeArea.X, GraphicsDevice.Viewport.TitleSafeArea.Y + 30), Color.White);
@@ -177,36 +162,18 @@ namespace AircraftShooter
 
         private void UpdatePlayer(GameTime gameTime)
         {
-            if (currentKeyboardState.IsKeyDown(Keys.Left) || currentKeyboardState.IsKeyDown(Keys.A))
-            {
-                player.Position.X -= player.Velocity.X; 
-            }
-            if (currentKeyboardState.IsKeyDown(Keys.Right) || currentKeyboardState.IsKeyDown(Keys.D))
-            {
-                player.Position.X += player.Velocity.X;
-            }
-            if (currentKeyboardState.IsKeyDown(Keys.Up) || currentKeyboardState.IsKeyDown(Keys.W))
-            {
-                player.Position.Y -= player.Velocity.Y;
-            }
-            if (currentKeyboardState.IsKeyDown(Keys.Down) || currentKeyboardState.IsKeyDown(Keys.S))
-            {
-                player.Position.Y += player.Velocity.Y; 
-            }
+            player.Update(gameTime, inputManager);
 
-            player.Position.X = MathHelper.Clamp(player.Position.X, 0, (GraphicsDevice.Viewport.Width - player.Width));
-            player.Position.Y = MathHelper.Clamp(player.Position.Y, 0, (GraphicsDevice.Viewport.Height - player.Height));
-
-            if (currentKeyboardState.IsKeyDown(Keys.Space) && previousKeyboardState.IsKeyUp(Keys.Space))
+            if (inputManager.KeyDown(Keys.Space))
             {
                 AddPlayerProjectile(new Vector2(player.Position.X - 4 + player.Width / 2, player.Position.Y));
-                bulletSound.Play();
+                bulletSound.Play();               
             }
 
             if (player.Health <= 0)
             {
                 player.Health = 100;
-                score = 0;
+                player.Score = 0;
             }
         }
 
@@ -227,14 +194,14 @@ namespace AircraftShooter
                     }
                 }
 
-                for (int j = 0; j < playerProjectiles.Count; j++)
+                for (int j = 0; j < player.Projectiles.Count; j++)
                 {
-                    playerProjectiles[j].BoundingRectangle = new Rectangle((int)playerProjectiles[j].Position.X, (int)playerProjectiles[j].Position.Y,
-                        playerProjectiles[j].Width, playerProjectiles[j].Height);
-                    if (playerProjectiles[j].BoundingRectangle.Intersects(enemies[i].BoundingRectangle))
+                    player.Projectiles[j].BoundingRectangle = new Rectangle((int)player.Projectiles[j].Position.X, (int)player.Projectiles[j].Position.Y,
+                        player.Projectiles[j].Width, player.Projectiles[j].Height);
+                    if (player.Projectiles[j].BoundingRectangle.Intersects(enemies[i].BoundingRectangle))
                     {
-                        enemies[i].Health -= playerProjectiles[j].Damage;
-                        playerProjectiles[j].IsActive = false;
+                        enemies[i].Health -= player.Projectiles[j].Damage;
+                        player.Projectiles[j].IsActive = false;
                     }
                 }
             }
@@ -266,12 +233,12 @@ namespace AircraftShooter
 
         private void UpdateProjectiles()
         {
-            for (int i = playerProjectiles.Count - 1; i >= 0; i--)
+            for (int i = player.Projectiles.Count - 1; i >= 0; i--)
             {
-                playerProjectiles[i].UpdateUp();
-                if (playerProjectiles[i].IsActive == false)
+                player.Projectiles[i].UpdateUp();
+                if (player.Projectiles[i].IsActive == false)
                 {
-                    playerProjectiles.RemoveAt(i);
+                    player.Projectiles.RemoveAt(i);
                 }
             }
         }
@@ -295,7 +262,7 @@ namespace AircraftShooter
         {
             Projectile bullet = new Projectile();
             bullet.Initialize(GraphicsDevice.Viewport, playerBulletTexture, position);
-            playerProjectiles.Add(bullet);
+            player.Projectiles.Add(bullet);
         }
 
         private void AddEnemyProjectile(Enemy enemy, Vector2 position)
@@ -304,7 +271,6 @@ namespace AircraftShooter
             bullet.Initialize(GraphicsDevice.Viewport, enemyBulletTexture, position);
             bullet.Velocity.Y = 7f;
             enemy.Projectiles.Add(bullet);
-            //enemyProjectiles.Add(bullet);
         }
 
         private void AddEnemy()
@@ -352,7 +318,7 @@ namespace AircraftShooter
                     {
                         AddExplosion(enemies[i].Position + new Vector2(enemies[i].Width / 2, enemies[i].Height / 2));
                         explosionSound.Play();
-                        score += enemies[i].Value;
+                        player.Score += enemies[i].Value;
                     }
                     enemies.RemoveAt(i);
                 }

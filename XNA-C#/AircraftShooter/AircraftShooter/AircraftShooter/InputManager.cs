@@ -28,14 +28,14 @@
 
         public bool KeyPressed(Keys key)
         {
-            return this.currentKeyBoardState.IsKeyDown(key) && this.previousKeyBoardState.IsKeyUp(key);
+            return this.currentKeyBoardState.IsKeyDown(key) && this.previousKeyBoardState.IsKeyDown(key);
         }
 
         public bool KeyPressed(params Keys[] keys)
         {
             foreach(Keys key in keys)
             {
-                if (this.currentKeyBoardState.IsKeyDown(key) && this.previousKeyBoardState.IsKeyUp(key))
+                if (this.currentKeyBoardState.IsKeyDown(key) && this.previousKeyBoardState.IsKeyDown(key))
                     return true;
             }
             return false;
@@ -43,14 +43,14 @@
 
         public bool KeyReleased(Keys key)
         {
-            return this.currentKeyBoardState.IsKeyUp(key) && this.previousKeyBoardState.IsKeyDown(key);
+            return this.currentKeyBoardState.IsKeyUp(key) && this.previousKeyBoardState.IsKeyUp(key);
         }
 
         public bool KeyReleased(params Keys[] keys)
         {
             foreach (Keys key in keys)
             {
-                if (this.currentKeyBoardState.IsKeyUp(key) && this.previousKeyBoardState.IsKeyDown(key))
+                if (this.currentKeyBoardState.IsKeyUp(key) && this.previousKeyBoardState.IsKeyUp(key))
                     return true;
             }
             return false;
@@ -58,14 +58,14 @@
 
         public bool KeyDown(Keys key)
         {
-            return currentKeyBoardState.IsKeyDown(key);
+            return currentKeyBoardState.IsKeyDown(key) && this.previousKeyBoardState.IsKeyUp(key);
         }
 
         public bool KeyDown(params Keys[] keys)
         {
             foreach (Keys key in keys)
             {
-                if (currentKeyBoardState.IsKeyDown(key))
+                if (currentKeyBoardState.IsKeyDown(key) && this.previousKeyBoardState.IsKeyUp(key))
                     return true;
             }
             return false;

@@ -10,7 +10,7 @@ namespace AircraftShooter
         /// </summary>
         static void Main(string[] args)
         {
-            using (Game1 game = new Game1())
+            using (GameAircraftShooter game = new GameAircraftShooter())
             {
                 game.Run();
             }
